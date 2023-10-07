@@ -26,14 +26,7 @@ func main() {
 		logrus.Fatalf("error loading env variables: %s", err.Error())
 	}
 
-	db, err := repository.NewPostgresDB(repository.Config{
-		Host:     viper.GetString("db.host"),
-		Port:     viper.GetString("db.port"),
-		Username: viper.GetString("db.username"),
-		DBName:   viper.GetString("db.dbname"),
-		SSLMode:  viper.GetString("db.sslmode"),
-		Password: os.Getenv("DB_PASSWORD"),
-	})
+	db, err := repository.NewPostgresDB()
 
 	if err != nil {
 		logrus.Fatalf("failed to initialize db: %s", err.Error())
@@ -63,9 +56,6 @@ func main() {
 	}
 
 	defer db.Close(context.Background())
-	//if err := db.Close(); err != nil {
-	//	logrus.Errorf("error occured on db connection close: %s", err.Error())
-	//}
 }
 
 func initConfig() error {

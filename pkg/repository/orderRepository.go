@@ -2,10 +2,13 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/MrClean-code/wbtech"
+	"github.com/MrClean-code/wbtech/pkg/nats"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v4"
+	"log"
 )
 
 type OrderPostgres struct {
@@ -13,7 +16,9 @@ type OrderPostgres struct {
 }
 
 func NewOrderPostgres(db *pgx.Conn) *OrderPostgres {
-	return &OrderPostgres{db: db}
+	return &OrderPostgres{
+		db: db,
+	}
 }
 
 func (r *OrderPostgres) CreateOrder(order wbtech.Order) (int, error) {
@@ -94,8 +99,6 @@ func (r *OrderPostgres) GetOrders(c *gin.Context) ([]wbtech.Order, error) {
 			return nil, err
 		}
 
-		defer itemRows.Close()
-
 		for itemRows.Next() {
 			var item wbtech.Item
 			err := itemRows.Scan(&item)
@@ -109,6 +112,18 @@ func (r *OrderPostgres) GetOrders(c *gin.Context) ([]wbtech.Order, error) {
 		orders = append(orders, order)
 
 	}
+
+	message, err := json.Marshal(orders)
+	if err != nil {
+		log.Fatalf("Failed marshal orders")
+	}
+
+	sc, err := nats.ConnectNATSStreaming()
+	err = sc.Publish("order-service", message)
+	if err != nil {
+		log.Fatalf("Failed to publish message: %v", err)
+	}
+	defer sc.Close()
 
 	return orders, nil
 
