@@ -53,11 +53,11 @@ CREATE TABLE orders
     shard_key          varchar(255),
     sm_id              int,
     date_created       varchar(255),
-    oof_shard          varchar(255),
-    deliveryId         int,
-    paymentId          int,
-    itemId             int,
-    foreign key (deliveryId) references delivery (id) on delete cascade,
-    foreign key (paymentId) references payment (id) on delete cascade,
-    foreign key (itemId) references item (id) on delete cascade
+    oof_shard          varchar(255)
+--     deliveryId         int,
+--     paymentId          int,
+--     itemId             int
+--     foreign key (deliveryId) references delivery (id) on delete cascade,
+--     foreign key (paymentId) references payment (id) on delete cascade,
+--     foreign key (itemId) references item (id) on delete cascade
 );

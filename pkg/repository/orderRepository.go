@@ -1,71 +1,115 @@
 package repository
 
 import (
+	"context"
 	"fmt"
 	"github.com/MrClean-code/wbtech"
-	"github.com/jmoiron/sqlx"
-	"github.com/sirupsen/logrus"
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v4"
 )
 
 type OrderPostgres struct {
-	db *sqlx.DB
+	db *pgx.Conn
 }
 
-func NewOrderPostgres(db *sqlx.DB) *OrderPostgres {
+func NewOrderPostgres(db *pgx.Conn) *OrderPostgres {
 	return &OrderPostgres{db: db}
 }
 
 func (r *OrderPostgres) CreateOrder(order wbtech.Order) (int, error) {
-	tx, err := r.db.Begin()
-	if err != nil {
-		return 0, err
-	}
+	//tx, err := r.db.Begin()
+	//if err != nil {
+	//	return 0, err
+	//}
 
-	var itemId int
+	var ord int
 	//createItemQuery := fmt.Sprintf(`
-	//			INSERT INTO %s (track_number, entry, locale, internal_signature, customer_id,
-	//			                customer_id, delivery_service, shard_key, sm_id, date_created,
-	//			                oof_shard)
-	//			values ($1, $2) RETURNING id`, todoItemsTable)
-	//
-	//row := tx.QueryRow(createItemQuery, item.Title, item.Description)
-	//err = row.Scan(&itemId)
-	//if err != nil {
-	//	tx.Rollback()
-	//	return 0, err
-	//}
-	//
-	//createListItemsQuery := fmt.Sprintf("INSERT INTO %s (list_id, item_id) values ($1, $2)", listsItemsTable)
-	//_, err = tx.Exec(createListItemsQuery, orderId, itemId)
+	//			INSERT INTO %s (tracknumber, entry, locale, internal_signature,
+	//			                customer_id, delivery_service, shard_key,
+	//			                sm_id, date_created, oof_shard, deliveryid,
+	//			                paymentid, itemid)
+	//			values
+	//			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	//			RETURNING id`, OrdersTable)
+	//row := tx.QueryRow(createItemQuery, order.TrackNumber, order.Entry,
+	//	order.Locale, order.InternalSignature, order.CustomerId, order.DeliveryService,
+	//	order.ShardKey, order.SmId, order.DateCreated, order.OofShard, order.Delivery,
+	//	order.Payment, order.Items)
+	//err = row.Scan(&ord)
 	//if err != nil {
 	//	tx.Rollback()
 	//	return 0, err
 	//}
 
-	return itemId, tx.Commit()
+	//return ord, tx.Commit()
+	return ord, nil
 }
 
-func (r *OrderPostgres) GetOrders() ([]wbtech.Order, error) {
-	logrus.Print("GetOrders orderRepository is ok")
-	var items []wbtech.Order
-	query := fmt.Sprintf(`SELECT o.id, o.tracknumber, o.entry, o.locale, o.internal_signature,
-							     o.customer_id, o.delivery_service, o.shard_key, o.sm_id,
-							     o.date_created, o.oof_shard, d.id, d.name, d.phone, d.city,
-							     d.address, d.region, d.email, i.id, i.track_number, i.price,
-							     i.rid, i.name, i.sale, i.size, i.total_price, i.nmid, i.brand,
-							     i.status, p.id, p.request_id, p.currency, p.provider, p.amount,
-							     p.payment_dt, p.bank, p.delivery_cost, p.goods_total, p.custom_fee
-								 FROM orders o
-									 INNER JOIN delivery d on d.id = o.deliveryid
-									 INNER JOIN item i 	   on i.id = o.paymentid
-									 INNER JOIN payment p  on p.id = o.itemid`)
-	err := r.db.Select(&items, query)
-	fmt.Println("items")
-	fmt.Println(items)
+func (r *OrderPostgres) GetOrders(c *gin.Context) ([]wbtech.Order, error) {
+	var orders []wbtech.Order
+	query := "SELECT orders.id, orders.tracknumber, orders.entry, " +
+		"orders.locale, orders.internal_signature, " +
+		"orders.customer_id, orders.delivery_service, orders.shard_key, orders.sm_id, " +
+		"orders.date_created, orders.oof_shard, " +
+		"(SELECT row_to_json(delivery) FROM delivery WHERE delivery.id = orders.delivery_id) AS delivery, " +
+		"(SELECT row_to_json(payment) FROM payment WHERE payment.id = orders.payment_id) AS payment " +
+		"FROM orders " +
+		"INNER JOIN delivery ON delivery.id = orders.delivery_id " +
+		"INNER JOIN payment ON payment.id = orders.payment_id "
 
+	rows, err := r.db.Query(context.Background(), query)
 	if err != nil {
+		fmt.Println("Ошибка выполнения запроса:", err)
 		return nil, err
 	}
+	defer rows.Close()
 
-	return items, nil
+	for rows.Next() {
+		var order wbtech.Order
+		err := rows.Scan(
+			&order.ID,
+			&order.TrackNumber,
+			&order.Entry,
+			&order.Locale,
+			&order.InternalSignature,
+			&order.CustomerId,
+			&order.DeliveryService,
+			&order.ShardKey,
+			&order.SmId,
+			&order.DateCreated,
+			&order.OofShard,
+			&order.Delivery,
+			&order.Payment,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		rows.Close()
+
+		itemsQuery := "SELECT row_to_json(item) FROM item WHERE item.id = $1"
+		itemRows, err := r.db.Query(context.Background(), itemsQuery, order.ID)
+		if err != nil {
+			fmt.Println("Ошибка выполнения запроса для элементов:", err)
+			return nil, err
+		}
+
+		defer itemRows.Close()
+
+		for itemRows.Next() {
+			var item wbtech.Item
+			err := itemRows.Scan(&item)
+			if err != nil {
+				return nil, err
+			}
+			order.Item = append(order.Item, item)
+		}
+		itemRows.Close()
+
+		orders = append(orders, order)
+
+	}
+
+	return orders, nil
+
 }

@@ -1,15 +1,16 @@
 package repository
 
 import (
+	"context"
 	"fmt"
-	"github.com/jmoiron/sqlx"
-	"github.com/sirupsen/logrus"
+	"github.com/jackc/pgx/v4"
+	"os"
 )
 
 const (
 	deliveriesTable = "deliveries"
 	itemsTable      = "items"
-	ordersTable     = "orders"
+	OrdersTable     = "orders"
 	paymentsTable   = "payments"
 )
 
@@ -22,19 +23,28 @@ type Config struct {
 	SSLMode  string
 }
 
-func NewPostgresDB(cfg Config) (*sqlx.DB, error) {
-	db, err := sqlx.Open("postgres", fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=%s",
-		cfg.Host, cfg.Port, cfg.Username, cfg.DBName, cfg.Password, cfg.SSLMode))
+func NewPostgresDB(cfg Config) (*pgx.Conn, error) {
+
+	conn, err := pgx.Connect(context.Background(), os.Getenv("DB_URL"))
 
 	if err != nil {
-		return nil, err
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		os.Exit(1)
 	}
 
-	err = db.Ping()
-	if err != nil {
-		return nil, err
-	}
-
-	logrus.Print("db connected")
-	return db, nil
+	//db, err := sqlx.Open("postgres", fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=%s",
+	//	cfg.Host, cfg.Port, cfg.Username, cfg.DBName, cfg.Password, cfg.SSLMode))
+	//
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//err = db.Ping()
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//logrus.Print("db connected")
+	//return db, nil
+	return conn, nil
 }

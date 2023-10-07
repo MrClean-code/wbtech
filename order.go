@@ -12,9 +12,12 @@ type Order struct {
 	SmId              int32  `json:"sm_id" db:"sm_id"`
 	DateCreated       string `json:"date_created" db:"date_created"`
 	OofShard          string `json:"oof_shard" db:"oof_shard"`
-	DeliveryId        int32  `json:"delivery" db:"deliveryid"`
-	PaymentId         int32  `json:"payment" db:"paymentid"`
-	ItemId            int32  `json:"item" db:"itemid"`
+	//DeliveryId        int32    `json:"deliveryId" db:"deliveryid"`
+	//PaymentId         int32    `json:"paymentId" db:"paymentid"`
+	//ItemId            int32    `json:"itemId" db:"itemid"`
+	Delivery Delivery `json:"delivery"`
+	Payment  Payment  `json:"payment"`
+	Item     []Item   `json:"items"`
 }
 
 type Delivery struct {
@@ -49,7 +52,7 @@ type Item struct {
 	Sale        int32  `json:"sale" db:"sale"`
 	Size        string `json:"size" db:"size"`
 	TotalPrice  int32  `json:"total_price" db:"total_price"`
-	NmId        int32  `json:"NmId" db:"nmid"`
+	NmId        int32  `json:"nm_id" db:"nmid"`
 	Brand       string `json:"brand" db:"brand"`
 	Status      int32  `json:"status" db:"status"`
 }

@@ -2,19 +2,20 @@ package repository
 
 import (
 	"github.com/MrClean-code/wbtech"
-	"github.com/jmoiron/sqlx"
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v4"
 )
 
 type OrderList interface {
 	CreateOrder(order wbtech.Order) (int, error)
-	GetOrders() ([]wbtech.Order, error)
+	GetOrders(c *gin.Context) ([]wbtech.Order, error)
 }
 
 type Repository struct {
 	OrderList
 }
 
-func NewRepository(db *sqlx.DB) *Repository {
+func NewRepository(db *pgx.Conn) *Repository {
 	return &Repository{
 		OrderList: NewOrderPostgres(db),
 	}
