@@ -23,6 +23,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	{
 		api.POST("/new/order", h.createOrder)
 		api.GET("/orders", h.getAllOrders)
+		api.GET("/orders/id", h.getOrderByID)
 		logrus.Print("handlers working")
 	}
 	return routes

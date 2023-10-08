@@ -11,6 +11,7 @@ import (
 type OrderList interface {
 	CreateOrders(order wbtech.Order) (int, error)
 	GetOrderAll(с *gin.Context) ([]wbtech.Order, error)
+	GetOrderByID(id int) (wbtech.Order, error)
 }
 
 type Service struct {

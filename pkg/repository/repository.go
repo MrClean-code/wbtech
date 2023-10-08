@@ -9,6 +9,7 @@ import (
 type OrderList interface {
 	CreateOrder(order wbtech.Order) (int, error)
 	GetOrders(c *gin.Context) ([]wbtech.Order, error)
+	GetOrderByID(id int) (wbtech.Order, error)
 }
 
 type Repository struct {

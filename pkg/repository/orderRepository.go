@@ -2,13 +2,12 @@ package repository
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/MrClean-code/wbtech"
 	"github.com/MrClean-code/wbtech/pkg/nats"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v4"
-	"log"
+	"github.com/nats-io/stan.go"
 )
 
 type OrderPostgres struct {
@@ -22,35 +21,51 @@ func NewOrderPostgres(db *pgx.Conn) *OrderPostgres {
 }
 
 func (r *OrderPostgres) CreateOrder(order wbtech.Order) (int, error) {
-	//tx, err := r.db.Begin()
-	//if err != nil {
-	//	return 0, err
-	//}
+	ctx := context.Background()
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback(ctx) // Rollback transaction on error
 
 	var ord int
-	//createItemQuery := fmt.Sprintf(`
-	//			INSERT INTO %s (tracknumber, entry, locale, internal_signature,
-	//			                customer_id, delivery_service, shard_key,
-	//			                sm_id, date_created, oof_shard, deliveryid,
-	//			                paymentid, itemid)
-	//			values
-	//			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-	//			RETURNING id`, OrdersTable)
-	//row := tx.QueryRow(createItemQuery, order.TrackNumber, order.Entry,
-	//	order.Locale, order.InternalSignature, order.CustomerId, order.DeliveryService,
-	//	order.ShardKey, order.SmId, order.DateCreated, order.OofShard, order.Delivery,
-	//	order.Payment, order.Items)
-	//err = row.Scan(&ord)
-	//if err != nil {
-	//	tx.Rollback()
-	//	return 0, err
-	//}
+	createItemQuery := fmt.Sprintf(`
+		INSERT INTO %s (tracknumber, entry, locale, internal_signature,
+		                customer_id, delivery_service, shard_key,
+		                sm_id, date_created, oof_shard, delivery_id,
+		                payment_id, item_id)
+		VALUES
+		($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		RETURNING id`, OrdersTable)
 
-	//return ord, tx.Commit()
+	row := tx.QueryRow(ctx, createItemQuery, order.TrackNumber, order.Entry,
+		order.Locale, order.InternalSignature, order.CustomerId, order.DeliveryService,
+		order.ShardKey, order.SmId, order.DateCreated, order.OofShard,
+		order.Delivery, order.Payment, order.Item)
+
+	if err := row.Scan(&ord); err != nil {
+		return 0, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return 0, err
+	}
+
 	return ord, nil
 }
 
 func (r *OrderPostgres) GetOrders(c *gin.Context) ([]wbtech.Order, error) {
+
+	sc, err := nats.ConnectNATSStreaming()
+
+	sub, err := sc.Subscribe("foo", func(m *stan.Msg) {
+		fmt.Printf("Received a message: %s\n", string(m.Data))
+	}, stan.DeliverAllAvailable())
+
+	if err != nil {
+		fmt.Printf("Error subscribing: %v\n", err)
+	}
+
 	var orders []wbtech.Order
 	query := "SELECT orders.id, orders.tracknumber, orders.entry, " +
 		"orders.locale, orders.internal_signature, " +
@@ -113,18 +128,13 @@ func (r *OrderPostgres) GetOrders(c *gin.Context) ([]wbtech.Order, error) {
 
 	}
 
-	message, err := json.Marshal(orders)
-	if err != nil {
-		log.Fatalf("Failed marshal orders")
-	}
+	sub.Unsubscribe()
 
-	sc, err := nats.ConnectNATSStreaming()
-	err = sc.Publish("order-service", message)
-	if err != nil {
-		log.Fatalf("Failed to publish message: %v", err)
-	}
 	defer sc.Close()
 
 	return orders, nil
+}
 
+func (r *OrderPostgres) GetOrderByID(id int) (wbtech.Order, error) {
+	panic("implement me")
 }
