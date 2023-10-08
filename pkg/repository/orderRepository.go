@@ -26,7 +26,7 @@ func (r *OrderPostgres) CreateOrder(order wbtech.Order) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer tx.Rollback(ctx) // Rollback transaction on error
+	defer tx.Rollback(ctx)
 
 	var ord int
 	createItemQuery := fmt.Sprintf(`
@@ -136,5 +136,67 @@ func (r *OrderPostgres) GetOrders(c *gin.Context) ([]wbtech.Order, error) {
 }
 
 func (r *OrderPostgres) GetOrderByID(id int) (wbtech.Order, error) {
-	panic("implement me")
+	ctx := context.Background()
+
+	query := `
+		SELECT
+            orders.id,
+            orders.tracknumber,
+            orders.entry,
+            orders.locale,
+            orders.internal_signature,
+            orders.customer_id,
+            orders.delivery_service,
+            orders.shard_key,
+            orders.sm_id,
+            orders.date_created,
+            orders.oof_shard,
+            (SELECT row_to_json(delivery) FROM delivery WHERE delivery.id = orders.delivery_id) AS delivery,
+            (SELECT row_to_json(payment) FROM payment WHERE payment.id = orders.payment_id) AS payment
+        FROM orders
+        INNER JOIN delivery ON delivery.id = orders.delivery_id
+        INNER JOIN payment ON payment.id = orders.payment_id
+        WHERE orders.id = $1`
+
+	var order wbtech.Order
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&order.ID,
+		&order.TrackNumber,
+		&order.Entry,
+		&order.Locale,
+		&order.InternalSignature,
+		&order.CustomerId,
+		&order.DeliveryService,
+		&order.ShardKey,
+		&order.SmId,
+		&order.DateCreated,
+		&order.OofShard,
+		&order.Delivery,
+		&order.Payment,
+	)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return wbtech.Order{}, fmt.Errorf("Order with ID %d not found", id)
+		}
+		return wbtech.Order{}, err
+	}
+
+	itemsQuery := "SELECT row_to_json(item) FROM item WHERE item.order_id = $1"
+	itemRows, err := r.db.Query(ctx, itemsQuery, id)
+	if err != nil {
+		return wbtech.Order{}, err
+	}
+	defer itemRows.Close()
+
+	for itemRows.Next() {
+		var item wbtech.Item
+		err := itemRows.Scan(&item)
+		if err != nil {
+			return wbtech.Order{}, err
+		}
+		order.Item = append(order.Item, item)
+	}
+
+	return order, nil
 }

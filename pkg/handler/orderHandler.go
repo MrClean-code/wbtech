@@ -5,6 +5,7 @@ import (
 	"github.com/MrClean-code/wbtech/pkg/exception"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
 )
 
 func (h *Handler) createOrder(c *gin.Context) {
@@ -49,5 +50,19 @@ func (h *Handler) getAllOrders(c *gin.Context) {
 }
 
 func (h *Handler) getOrderByID(c *gin.Context) {
-	//h.services.GetOrderByID()
+	idStr := c.Param("id")
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		exception.NewErrorResponse(c, http.StatusBadRequest, "Invalid 'id' parameter")
+		return
+	}
+
+	order, err := h.services.GetOrderByID(id)
+	if err != nil {
+		exception.NewErrorResponse(c, http.StatusInternalServerError, "Failed to get order by ID")
+		return
+	}
+
+	c.JSON(http.StatusOK, order)
 }
