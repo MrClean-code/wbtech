@@ -43,7 +43,7 @@ func main() {
 		}
 	}()
 
-	logrus.Print("TodoApp Started")
+	logrus.Print("WbApp Started")
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)

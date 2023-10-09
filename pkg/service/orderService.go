@@ -5,6 +5,7 @@ import (
 	"github.com/MrClean-code/wbtech"
 	"github.com/MrClean-code/wbtech/pkg/repository"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 type OrderListPostgres struct {
@@ -20,6 +21,7 @@ func NewPostListPostgres(repos repository.OrderList) *OrderListPostgres {
 }
 
 func (s *OrderListPostgres) GetOrderByID(id int) (wbtech.Order, error) {
+	logrus.Print("GetOrderById")
 	cachedData, found := s.cache.Get(fmt.Sprintf("order_%d", id))
 	if found {
 		if order, ok := cachedData.(wbtech.Order); ok {

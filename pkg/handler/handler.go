@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"github.com/MrClean-code/wbtech/pkg/service"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -12,7 +11,6 @@ type Handler struct {
 }
 
 func NewHandler(services *service.Service) *Handler {
-	fmt.Println("NewHandler 111")
 	return &Handler{services: services}
 }
 
@@ -21,9 +19,9 @@ func (h *Handler) InitRoutes() *gin.Engine {
 
 	api := routes.Group("/api")
 	{
-		api.POST("/new/order", h.createOrder)
+		//api.POST("/new/order", h.createOrder)
 		api.GET("/orders", h.getAllOrders)
-		api.GET("/orders:id", h.getOrderByID)
+		api.GET("/orders/:id", h.getOrderByID)
 		logrus.Print("handlers working")
 	}
 	return routes

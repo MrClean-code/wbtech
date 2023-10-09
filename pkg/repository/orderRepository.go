@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v4"
 	"github.com/nats-io/stan.go"
+	"github.com/sirupsen/logrus"
 )
 
 type OrderPostgres struct {
@@ -137,7 +138,7 @@ func (r *OrderPostgres) GetOrders(c *gin.Context) ([]wbtech.Order, error) {
 
 func (r *OrderPostgres) GetOrderByID(id int) (wbtech.Order, error) {
 	ctx := context.Background()
-
+	logrus.Printf("%d", id)
 	query := `
 		SELECT
             orders.id,
@@ -182,7 +183,7 @@ func (r *OrderPostgres) GetOrderByID(id int) (wbtech.Order, error) {
 		return wbtech.Order{}, err
 	}
 
-	itemsQuery := "SELECT row_to_json(item) FROM item WHERE item.order_id = $1"
+	itemsQuery := "SELECT row_to_json(item) FROM item WHERE item.id = $1"
 	itemRows, err := r.db.Query(ctx, itemsQuery, id)
 	if err != nil {
 		return wbtech.Order{}, err

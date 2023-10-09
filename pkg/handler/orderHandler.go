@@ -4,8 +4,10 @@ import (
 	"github.com/MrClean-code/wbtech"
 	"github.com/MrClean-code/wbtech/pkg/exception"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func (h *Handler) createOrder(c *gin.Context) {
@@ -41,6 +43,7 @@ func (h *Handler) createOrder(c *gin.Context) {
 }
 
 func (h *Handler) getAllOrders(c *gin.Context) {
+	logrus.Print("All orders")
 	orders, err := h.services.GetOrderAll(c)
 	if err != nil {
 		exception.NewErrorResponse(c, http.StatusInternalServerError, "Failed to get orders")
@@ -50,9 +53,11 @@ func (h *Handler) getAllOrders(c *gin.Context) {
 }
 
 func (h *Handler) getOrderByID(c *gin.Context) {
-	idStr := c.Param("id")
 
-	id, err := strconv.Atoi(idStr)
+	idStr := c.Param("id")
+	logrus.Printf("id: %s", idStr)
+	parts := strings.Split(idStr, "=")
+	id, err := strconv.Atoi(parts[1])
 	if err != nil {
 		exception.NewErrorResponse(c, http.StatusBadRequest, "Invalid 'id' parameter")
 		return
